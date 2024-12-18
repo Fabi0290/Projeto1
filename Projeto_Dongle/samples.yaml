@@ -1,0 +1,7 @@
+sample:
+  name: "Projeto_Dongle"
+  description: "Exemplo de dispositivo BLE Dongle com Zephyr no nRF52840"
+  tests:
+    - name: "teste_dongle"
+      platform_allow: ["nrf52840dongle_nrf52840"]
+      extra_args: ""
