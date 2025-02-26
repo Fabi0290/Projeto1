@@ -5,10 +5,15 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/uart.h> // Biblioteca UART
 
-#define DEVICE_NAME "Zephyr_Dk"
+#define DEVICE_NAME "Zephyr_Dk" //nome dispositivo 
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
-#define UPDATE_INTERVAL K_SECONDS(5)  // Intervalo de atualização de 5 segundos
+#define UPDATE_INTERVAL K_SECONDS(5)  // Intervalo atualizacao 5 seg
+
+// UART 
+#define UART_DEVICE_NODE DT_CHOSEN(zephyr_console)
+static const struct device *uart_dev;
 
 /*
  * Advertisement data.
@@ -26,48 +31,62 @@ static const struct bt_data ad[] = {
                   0x08) /* .org */
 };
 
-/* Scan Response data to include the device name */
+/* Scan Response */
 static const struct bt_data sd[] = {
     BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
 };
 
-/* Global variables to track connection information */
+/* vars */
 static struct bt_conn *default_conn;
 static int64_t connect_time;
 
-/* Callback for connection */
+/* func mensagem via UART */
+void send_uart_message(const char *message)
+{
+    if (uart_dev) {
+        while (*message) {
+            uart_poll_out(uart_dev, *message++); // Envia via UART
+        }
+        uart_poll_out(uart_dev, '\n'); //nova linha
+    }
+}
+
+/* Callback conexao blueTooth */
 static void connected(struct bt_conn *conn, uint8_t err)
 {
     if (err) {
         printk("Connection failed (err %u)\n", err);
+        send_uart_message("ligado: false"); // Mensg UART
         return;
     }
 
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
-    default_conn = conn;
-    connect_time = k_uptime_get(); // Capture the connection time
+    default_conn = conn; //armazena conec ativa
+    connect_time = k_uptime_get(); // conexao time
     printk("Connected to %s\n", addr);
+    send_uart_message("ligado: true"); // Mensg UART
 }
 
-/* Callback for disconnection */
+/* Callback perca conexao */
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
     char addr[BT_ADDR_LE_STR_LEN];
-    int64_t disconnect_time = k_uptime_get();
+    int64_t disconnect_time = k_uptime_get(); //tempo disconnect
 
     if (default_conn) {
         bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
         printk("Disconnected from %s (reason %u)\n", addr, reason);
 
-        /* Calculate and print the time connected */
+        //calcular tempo conexao 
         int64_t duration = disconnect_time - connect_time;
-        int64_t duration_seconds = duration / 1000;
+        int64_t duration_seconds = duration / 1000;// Conversao segundos
         printk("Connection duration: %lld seconds\n", duration_seconds);
 
         default_conn = NULL;
     }
+    send_uart_message("ligado: false"); // Mensg UART
 }
 
 /* Connection callbacks structure */
@@ -76,7 +95,7 @@ static struct bt_conn_cb conn_callbacks = {
     .disconnected = disconnected,
 };
 
-/* Callback to indicate Bluetooth readiness */
+/* Callback to indicate Bluetooth */
 static void bt_ready(int err)
 {
     if (err) {
@@ -96,13 +115,21 @@ static void bt_ready(int err)
     printk("Beacon started advertising\n");
 }
 
+// INICIO MAIN
 int main(void)
 {
     int err;
+    //START
+    printk("Starting Beacon Demo Zephyr_Dk\n");
 
-    printk("Starting Beacon Demo with Name Zephyr_Dk\n");
+    /* Initialize the UART device */
+    uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
+    if (!device_is_ready(uart_dev)) {
+        printk("UART device not ready\n");
+        return -1;
+    }
 
-    /* Initialize the Bluetooth Subsystem */
+    /* Initialize the Bluetooth*/
     err = bt_enable(bt_ready);
     if (err) {
         printk("Bluetooth init failed (err %d)\n", err);
@@ -112,12 +139,12 @@ int main(void)
     /* Register connection callbacks */
     bt_conn_cb_register(&conn_callbacks);
 
-    /* Infinite loop to show connection information every 5 seconds */
+    //Loop 5s
     while (1) {
         if (default_conn) {
             int64_t current_time = k_uptime_get();
             int64_t connected_duration = current_time - connect_time;
-            int64_t connected_duration_sec = connected_duration / 1000;
+            int64_t connected_duration_sec = connected_duration / 1000;// Conversao segundos
 
             char addr[BT_ADDR_LE_STR_LEN];
             bt_addr_le_to_str(bt_conn_get_dst(default_conn), addr, sizeof(addr));
@@ -128,7 +155,7 @@ int main(void)
             printk("\nNo active connection");
         }
 
-        k_sleep(UPDATE_INTERVAL);  // Wait for 5 seconds before checking again
+        k_sleep(UPDATE_INTERVAL);  // verifificar em 5s
     }
 
     return 0;

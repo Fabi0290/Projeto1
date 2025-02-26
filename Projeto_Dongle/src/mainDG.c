@@ -6,13 +6,13 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/hci.h>
 
-// Endereço do dispositivo alvo
+// Endereco do dispositivo alvo
 #define TARGET_ADDR "FE:7E:BC:C4:9F:1E"
 
-// Declaração de funções
+// Declarar funcoes
 static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t adv_type, struct net_buf_simple *buf);
 
-// Callback de conexão
+// Callback de conexao
 static void connected(struct bt_conn *conn, uint8_t err)
 {
     if (err) {
@@ -22,18 +22,20 @@ static void connected(struct bt_conn *conn, uint8_t err)
     }
 }
 
-// Callback de desconexão
+// Callback perca conexao
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
     printk("Desconectado (razão: %u)\n", reason);
 
-    // Reinicia o scanner para procurar o dispositivo novamente
+    // Reinicia o scanner para procurar disp alvo novamente
     int err = bt_le_scan_start(BT_LE_SCAN_ACTIVE, device_found);
     if (err) {
         printk("Erro ao reiniciar scanner: %d\n", err);
     } else {
         printk("Scanner reiniciado. Procurando pelo dispositivo: %s...\n", TARGET_ADDR);
     }
+
+     sys_reboot(0);
 }
 
 // Estruturas de callback
@@ -42,10 +44,10 @@ static struct bt_conn_cb conn_callbacks = {
     .disconnected = disconnected,
 };
 
-// Variável para armazenar a conexão
+// Vars armazenar a conexao
 static struct bt_conn *default_conn;
 
-// Callback chamado quando dispositivos são encontrados
+// Callback dispositivo encontrado
 static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t adv_type, struct net_buf_simple *buf)
 {
     char dev_addr[BT_ADDR_LE_STR_LEN];
@@ -53,12 +55,12 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t adv_type
 
     printk("Dispositivo encontrado: %s (RSSI: %d)\n", dev_addr, rssi);
 
-    // Remove o tipo de endereço da string para comparação
+    // Remove o tipo de endereco da string para comparar
     char stripped_addr[18];
     strncpy(stripped_addr, dev_addr, 17);
-    stripped_addr[17] = '\0'; // Garante o término da string
+    stripped_addr[17] = '\0'; // garante tfim da string
 
-    // Verifica se o dispositivo encontrado corresponde ao endereço alvo
+    // Verifica se o dispositivo encontrado corresponde ao endereco alvo
     if (strcmp(stripped_addr, TARGET_ADDR) == 0) {
         printk("Dispositivo alvo encontrado: %s\n", dev_addr);
 
@@ -69,7 +71,7 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t adv_type
             return;
         }
 
-        // Inicia a conexão
+        // Inicia a conexao
         err = bt_conn_le_create(addr, BT_CONN_LE_CREATE_CONN, BT_LE_CONN_PARAM_DEFAULT, &default_conn);
         if (err) {
             printk("Falha ao criar conexão: %d\n", err);
@@ -79,11 +81,11 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t adv_type
         printk("Tentando conectar ao dispositivo: %s\n", dev_addr);
     }
 }
-
+//MAIN
 void main(void)
 {
     int err;
-
+    //INICIO
     printk("Inicializando BLE Scanner\n");
 
     // Inicializa o Bluetooth
@@ -95,7 +97,7 @@ void main(void)
 
     printk("Bluetooth inicializado\n");
 
-    // Registra os callbacks de conexão
+    // Registracallbacks conexao
     bt_conn_cb_register(&conn_callbacks);
 
     // Inicia o scanner BLE

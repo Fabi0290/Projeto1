@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
 #LINHA ADICIONAL PELO ERRO DO OBJCOPY
 set(CMAKE_OBJCOPY "C:/Users/fabio/zephyr-sdk-0.17.0/arm-zephyr-eabi/arm-zephyr-eabi/bin/objcopy.exe")
 # Defina a versão mínima do CMake
